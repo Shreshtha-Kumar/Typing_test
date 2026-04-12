@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Typing Test</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+
+  <!-- AUTH -->
+  <div id="auth" class="card">
+    <h2>Typing Test</h2>
+
+    <input id="username" placeholder="Username">
+
+    <div class="password-box">
+      <input id="password" type="password" placeholder="Password">
+      <span onclick="togglePassword()">👁️</span>
+    </div>
+
+    <p id="authMessage" class="message"></p>
+
+    <div class="btn-row">
+      <button onclick="register()">Register</button>
+      <button onclick="login()">Login</button>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="app" class="card hidden">
+    <div id="lessonTracker"></div>
+
+    <p id="passage"></p>
+    <input id="hiddenInput" autofocus>
+
+    <h3 id="result"></h3>
+    <p id="stats"></p>
+
+    <button id="restartBtn" onclick="startTest()">Restart</button>
+  </div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
