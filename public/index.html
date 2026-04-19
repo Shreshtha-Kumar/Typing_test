@@ -1,47 +1,109 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Typing Test</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TypingTest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Share+Tech+Mono&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
 
-<div class="container">
-
-  <!-- AUTH -->
-  <div id="auth" class="card">
-    <h2>Typing Test</h2>
-
-    <input id="username" placeholder="Username">
-
-    <div class="password-box">
-      <input id="password" type="password" placeholder="Password">
-      <span onclick="togglePassword()">👁️</span>
+  <!-- HANGING LOGO -->
+  <div class="hang-logo" id="hangLogo">
+    <div class="hang-ropes">
+      <span style="--i:0"></span><span style="--i:1"></span><span style="--i:2"></span><span style="--i:3"></span><span style="--i:4"></span><span style="--i:5"></span><span class="rope-gap"></span><span style="--i:6"></span><span style="--i:7"></span><span style="--i:8"></span><span style="--i:9"></span>
     </div>
-
-    <p id="authMessage" class="message"></p>
-
-    <div class="btn-row">
-      <button onclick="register()">Register</button>
-      <button onclick="login()">Login</button>
+    <div class="hang-letters">
+      <span style="--i:0">T</span><span style="--i:1">y</span><span style="--i:2">p</span><span style="--i:3">i</span><span style="--i:4">n</span><span style="--i:5">g</span><span class="letter-gap"></span><span style="--i:6">T</span><span style="--i:7">e</span><span style="--i:8">s</span><span style="--i:9">t</span>
     </div>
   </div>
 
-  <!-- APP -->
-  <div id="app" class="card hidden">
-    <div id="lessonTracker"></div>
-
-    <p id="passage"></p>
-    <input id="hiddenInput" autofocus>
-
-    <h3 id="result"></h3>
-    <p id="stats"></p>
-
-    <button id="restartBtn" onclick="startTest()">Restart</button>
+  <!-- AUTH PAGE -->
+  <div id="auth" class="page">
+    <div class="auth-card">
+      <p class="auth-sub">Track your speed. Own the keyboard.</p>
+      <div class="tab-switch">
+        <button class="tab active" id="tabLogin" onclick="setTab('login')">Login</button>
+        <button class="tab" id="tabRegister" onclick="setTab('register')">Register</button>
+      </div>
+      <div class="field-group">
+        <label>Username</label>
+        <input id="username" type="text" autocomplete="off" placeholder="your_handle"/>
+      </div>
+      <div class="field-group">
+        <label>Password</label>
+        <div class="pw-wrap">
+          <input id="password" type="password" placeholder="••••••••"/>
+          <button class="pw-eye" onclick="togglePw()" tabindex="-1">👁</button>
+        </div>
+      </div>
+      <p class="auth-msg" id="authMsg"></p>
+      <button class="btn-main" id="authBtn" onclick="handleAuth()">Login</button>
+    </div>
   </div>
 
-</div>
+  <!-- APP PAGE -->
+  <div id="app" class="page hidden">
+    <div class="app-topbar">
+      <div class="topbar-user">
+        <span class="user-dot"></span>
+        <span id="topUser"></span>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn-ghost" onclick="openGraph()">📈 History</button>
+        <button class="btn-ghost" onclick="logout()">Logout</button>
+      </div>
+    </div>
 
-<script src="script.js"></script>
+    <div class="app-body">
+      <div class="stat-row">
+        <div class="stat-pill">
+          <span class="stat-label">Best</span>
+          <span class="stat-val" id="statBest">—</span>
+          <span class="stat-unit">wpm</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-label">Avg</span>
+          <span class="stat-val" id="statAvg">—</span>
+          <span class="stat-unit">wpm</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-label">Lesson</span>
+          <span class="stat-val" id="lessonNum">1</span>
+          <span class="stat-unit">/ 3</span>
+        </div>
+      </div>
+
+      <div class="passage-wrap" onclick="focusInput()">
+        <div class="passage-inner" id="passage"></div>
+        <p class="focus-hint" id="focusHint">— click here or press any key to start —</p>
+      </div>
+
+      <input id="hiddenInput" class="hidden-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+
+      <div class="result-line" id="resultLine"></div>
+      <button class="btn-restart" onclick="startTest()">↺ New Lesson</button>
+    </div>
+  </div>
+
+  <!-- GRAPH MODAL -->
+  <div id="graphModal" class="modal-backdrop hidden" onclick="closeGraphOutside(event)">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>WPM History</h3>
+        <button class="modal-close" onclick="closeGraph()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="chart-area" id="chartArea">
+          <p class="chart-empty">No attempts yet.</p>
+        </div>
+        <p class="chart-legend">Each bar = one completed lesson (avg of 3 passages)</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>

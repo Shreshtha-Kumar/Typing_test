@@ -1,175 +1,241 @@
+// ── State ─────────────────────────────────────────────────────────────────────
 let passageText = "";
-let startTime = null;
-let testActive = false;
-
+let startTime   = null;
+let testActive  = false;
 let lessonCount = 0;
-let totalWPM = 0;
+let totalWPM    = 0;
+let currentTab  = "login";
 const LESSON_SIZE = 3;
 
-// UI
-function togglePassword() {
-  password.type = password.type === "password" ? "text" : "password";
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+function showAuthMsg(msg, type) {
+  const el = $("authMsg");
+  el.textContent = msg;
+  el.className = "auth-msg " + (type || "");
 }
 
-function showMessage(msg, type) {
-  authMessage.innerText = msg;
-  authMessage.className = "message " + type;
+// ── Password toggle ───────────────────────────────────────────────────────────
+function togglePw() {
+  const pw = $("password");
+  pw.type = pw.type === "password" ? "text" : "password";
 }
 
-function updateLessonTracker() {
-  lessonTracker.innerText = `Lesson ${lessonCount + 1} / ${LESSON_SIZE}`;
+// ── Tab switch ────────────────────────────────────────────────────────────────
+function setTab(tab) {
+  currentTab = tab;
+  $("tabLogin").classList.toggle("active", tab === "login");
+  $("tabRegister").classList.toggle("active", tab === "register");
+  $("authBtn").textContent = tab === "login" ? "Login" : "Create Account";
+  showAuthMsg("");
 }
 
-// AUTH
-async function register() {
-  const res = await fetch('/register', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      username: username.value,
-      password: password.value
-    })
-  });
+// ── Auth ──────────────────────────────────────────────────────────────────────
+async function handleAuth() {
+  const username = $("username").value.trim();
+  const password = $("password").value;
+  if (!username || !password) return showAuthMsg("Fill in both fields", "error");
 
-  const data = await res.json();
-  data.success
-    ? showMessage("User created successfully!", "success")
-    : showMessage(data.error, "error");
-}
+  const endpoint = currentTab === "login" ? "/login" : "/register";
+  try {
+    const res  = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await res.json();
+    if (data.error) return showAuthMsg(data.error, "error");
 
-async function login() {
-  const res = await fetch('/login', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      username: username.value,
-      password: password.value
-    })
-  });
+    if (currentTab === "register") {
+      showAuthMsg("Account created! You can now log in.", "success");
+      setTab("login");
+      return;
+    }
 
-  const data = await res.json();
-
-  if (data.success) {
-    auth.classList.add('hidden');
-    app.classList.remove('hidden');
-
+    // Logged in
+    $("topUser").textContent = username;
+    $("auth").classList.add("hidden");
+    $("app").classList.remove("hidden");
     lessonCount = 0;
-    totalWPM = 0;
-
-    startNewTest();
+    totalWPM    = 0;
     loadStats();
-  } else {
-    showMessage(data.error, "error");
+    startNewTest();
+  } catch {
+    showAuthMsg("Could not connect to server", "error");
   }
 }
 
-// TEST FLOW
-async function startNewTest() {
-  const res = await fetch('/passage');
-  const data = await res.json();
+async function logout() {
+  await fetch("/logout", { method: "POST" }).catch(() => {});
+  $("app").classList.add("hidden");
+  $("auth").classList.remove("hidden");
+  $("username").value = "";
+  $("password").value = "";
+  showAuthMsg("");
+}
 
-  passageText = data.passage;
+// Allow Enter key on auth inputs
+["username","password"].forEach(id => {
+  $(id)?.addEventListener("keydown", e => { if (e.key === "Enter") handleAuth(); });
+});
+
+// ── Passage ───────────────────────────────────────────────────────────────────
+async function startNewTest() {
+  try {
+    const res  = await fetch("/passage");
+    const data = await res.json();
+    if (data.error) return;
+    passageText = data.passage;
+  } catch { return; }
 
   renderPassage();
-  updateLessonTracker();
-
-  hiddenInput.value = "";
-  hiddenInput.focus();
-
-  startTime = null;
+  $("hiddenInput").value = "";
+  startTime  = null;
   testActive = true;
-
-  result.innerText = "";
+  $("resultLine").textContent = "";
+  $("lessonNum").textContent  = lessonCount + 1;
+  $("focusHint").classList.remove("hidden-hint");
 }
 
 function startTest() {
   lessonCount = 0;
-  totalWPM = 0;
+  totalWPM    = 0;
   startNewTest();
 }
 
-// RENDER
 function renderPassage() {
-  passage.innerHTML = "";
-
-  passageText.split("").forEach((char, i) => {
+  const container = $("passage");
+  container.innerHTML = "";
+  [...passageText].forEach((ch, i) => {
     const span = document.createElement("span");
-    span.innerText = char;
-
+    span.textContent = ch;
     if (i === 0) span.classList.add("current");
-
-    passage.appendChild(span);
+    container.appendChild(span);
   });
 }
 
-// KEYBR STYLE TYPING
-hiddenInput.addEventListener("input", async () => {
-  const typed = hiddenInput.value;
-  const spans = passage.querySelectorAll("span");
+// ── Focus ─────────────────────────────────────────────────────────────────────
+function focusInput() {
+  $("hiddenInput").focus();
+  $("focusHint").classList.add("hidden-hint");
+}
 
-  if (!startTime && typed.length > 0) {
-    startTime = Date.now();
-  }
-
-  spans.forEach((span, i) => {
-    span.classList.remove("correct", "wrong", "current");
-
-    const expected = span.innerText;
-    const char = typed[i];
-
-    if (char == null) return;
-
-    if (char === expected) {
-      span.classList.add("correct");
-    } else {
-      span.classList.add("wrong");
-    }
-  });
-
-  const nextIndex = typed.length;
-
-  if (nextIndex < spans.length) {
-    spans[nextIndex].classList.add("current");
-  }
-
-  // COMPLETE
-  if (typed.length >= passageText.length && testActive) {
-    testActive = false;
-
-    const time = (Date.now() - startTime) / 1000;
-    const words = passageText.split(/\s+/).length;
-    const wpm = Math.round((words / time) * 60);
-
-    totalWPM += wpm;
-    lessonCount++;
-
-    result.innerText = `Passage ${lessonCount}/${LESSON_SIZE} → WPM: ${wpm}`;
-
-    if (lessonCount < LESSON_SIZE) {
-      setTimeout(() => startNewTest(), 800);
-    } else {
-      const avgLessonWPM = Math.round(totalWPM / LESSON_SIZE);
-
-      result.innerText = `Lesson Complete 🎉 Avg WPM: ${avgLessonWPM}`;
-
-      const res = await fetch('/result', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ wpm: avgLessonWPM })
-      });
-
-      const data = await res.json();
-      stats.innerText = `Best: ${data.best}, Avg: ${data.avg}`;
-
-      lessonCount = 0;
-      totalWPM = 0;
+// auto-focus on any keypress while app is visible
+document.addEventListener("keydown", e => {
+  if (!$("app").classList.contains("hidden") && !$("graphModal") || $("graphModal").classList.contains("hidden")) {
+    if (e.key.length === 1 || e.key === "Backspace") {
+      focusInput();
     }
   }
 });
 
-// STATS
+// ── Typing ────────────────────────────────────────────────────────────────────
+$("hiddenInput").addEventListener("input", async () => {
+  if (!testActive) return;
+
+  const typed = $("hiddenInput").value;
+  const spans = $("passage").querySelectorAll("span");
+
+  if (!startTime && typed.length > 0) startTime = Date.now();
+
+  spans.forEach((span, i) => {
+    span.classList.remove("correct", "wrong", "current");
+    if (i < typed.length) {
+      span.classList.add(typed[i] === passageText[i] ? "correct" : "wrong");
+    } else if (i === typed.length) {
+      span.classList.add("current");
+    }
+  });
+
+  if (typed.length >= passageText.length) {
+    testActive = false;
+    const elapsed = (Date.now() - startTime) / 1000;
+    const words   = passageText.trim().split(/\s+/).length;
+    const wpm     = Math.round((words / elapsed) * 60);
+    totalWPM    += wpm;
+    lessonCount += 1;
+
+    if (lessonCount < LESSON_SIZE) {
+      $("resultLine").textContent = `Passage ${lessonCount}/${LESSON_SIZE} — ${wpm} WPM. Next in 1s…`;
+      setTimeout(() => startNewTest(), 1000);
+    } else {
+      const avgWPM = Math.round(totalWPM / LESSON_SIZE);
+      $("resultLine").textContent = `Lesson complete 🎉  Avg: ${avgWPM} WPM`;
+
+      try {
+        const res  = await fetch("/result", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ wpm: avgWPM }),
+        });
+        const data = await res.json();
+        if (!data.error) {
+          $("statBest").textContent = data.best;
+          $("statAvg").textContent  = parseFloat(data.avg).toFixed(0);
+        }
+      } catch {}
+
+      // Reset for next lesson
+      lessonCount = 0;
+      totalWPM    = 0;
+    }
+  }
+});
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
 async function loadStats() {
-  const res = await fetch('/stats');
-  const data = await res.json();
-  stats.innerText = `Best: ${data.best_wpm}, Avg: ${data.avg_wpm}`;
+  try {
+    const res  = await fetch("/stats");
+    const data = await res.json();
+    if (data.error) return;
+    $("statBest").textContent = data.best_wpm || "—";
+    $("statAvg").textContent  = data.avg_wpm ? parseFloat(data.avg_wpm).toFixed(0) : "—";
+  } catch {}
 }
+
+// ── History Graph ─────────────────────────────────────────────────────────────
+async function openGraph() {
+  $("graphModal").classList.remove("hidden");
+
+  try {
+    const res  = await fetch("/history");
+    const rows = await res.json();
+    const area = $("chartArea");
+
+    if (!rows || rows.length === 0 || rows.error) {
+      area.innerHTML = `<p class="chart-empty">No attempts yet. Complete a lesson first.</p>`;
+      return;
+    }
+
+    const maxWpm = Math.max(...rows.map(r => r.wpm), 1);
+    const MAX_BARS = 30; // only show last 30
+    const display  = rows.slice(-MAX_BARS);
+
+    area.innerHTML = display.map((row, i) => {
+      const heightPct = Math.round((row.wpm / maxWpm) * 100);
+      const barH      = Math.max(4, Math.round(heightPct * 1.6)); // max ~160px
+      return `
+        <div class="chart-bar-wrap" title="Attempt ${i+1}: ${row.wpm} WPM">
+          <span class="chart-bar-val">${row.wpm}</span>
+          <div class="chart-bar" style="height:${barH}px"></div>
+          <span class="chart-bar-idx">${i+1}</span>
+        </div>`;
+    }).join("");
+  } catch {
+    $("chartArea").innerHTML = `<p class="chart-empty">Failed to load history.</p>`;
+  }
+}
+
+function closeGraph() {
+  $("graphModal").classList.add("hidden");
+}
+
+function closeGraphOutside(e) {
+  if (e.target === $("graphModal")) closeGraph();
+}
+
+// Close modal with Escape
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") closeGraph();
+});
