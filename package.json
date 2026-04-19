@@ -4,6 +4,7 @@
   "description": "A typing speed test app with user auth and leaderboard",
   "main": "server/server.js",
   "scripts": {
+    "postinstall": "npm rebuild sqlite3 --build-from-source",
     "start": "node server/server.js"
   },
   "dependencies": {
